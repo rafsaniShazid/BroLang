@@ -8,6 +8,9 @@ int yylex(void);
 
 %token INT LONG_LONG FLOAT COUT CIN IF ELSE WHILE RETURN BREAK NUMBER IDENTIFIER
 
+%left '+' '-'
+%left '*' '/'
+
 %%
 program:
     statements
@@ -19,7 +22,8 @@ statements:
     ;
 
 statement:
-    declaration
+      declaration
+    | assignment
     ;
 
 declaration:
@@ -27,6 +31,20 @@ declaration:
     {
         printf("Declared variable\n");
     }
+    ;
+
+assignment:
+    IDENTIFIER '=' expression
+    {
+        printf("Assigned expression\n");
+    }
+expression:
+      NUMBER
+    | IDENTIFIER
+    | expression '+' expression
+    | expression '-' expression
+    | expression '*' expression
+    | expression '/' expression
     ;
 %%
 
