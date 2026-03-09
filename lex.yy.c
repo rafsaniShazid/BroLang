@@ -815,65 +815,71 @@ YY_RULE_SETUP
 case 11:
 YY_RULE_SETUP
 #line 20 "bro.l"
-{ return NUMBER; }
+{
+    yylval.str = strdup(yytext);
+    return NUMBER;
+}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 21 "bro.l"
+#line 24 "bro.l"
 { return '='; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 22 "bro.l"
+#line 25 "bro.l"
 { return '+'; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 23 "bro.l"
+#line 26 "bro.l"
 { return '-'; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 24 "bro.l"
+#line 27 "bro.l"
 { return '*'; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 25 "bro.l"
+#line 28 "bro.l"
 { return '/'; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 26 "bro.l"
+#line 29 "bro.l"
 { return '>'; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 27 "bro.l"
+#line 30 "bro.l"
 { return '<'; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 29 "bro.l"
-{ return IDENTIFIER; }
+#line 32 "bro.l"
+{
+    yylval.str = strdup(yytext);
+    return IDENTIFIER;
+}
 	YY_BREAK
 case 20:
 /* rule 20 can match eol */
 YY_RULE_SETUP
-#line 31 "bro.l"
+#line 37 "bro.l"
 ;
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 33 "bro.l"
+#line 39 "bro.l"
 { return yytext[0]; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 34 "bro.l"
+#line 40 "bro.l"
 ECHO;
 	YY_BREAK
-#line 877 "lex.yy.c"
+#line 883 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1878,6 +1884,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 34 "bro.l"
+#line 40 "bro.l"
 
 

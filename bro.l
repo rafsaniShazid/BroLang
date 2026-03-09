@@ -17,7 +17,10 @@
 "yeet"       { return RETURN; }
 "rip"        { return BREAK; }
 
-[0-9]+       { return NUMBER; }
+[0-9]+ {
+    yylval.str = strdup(yytext);
+    return NUMBER;
+}
 "=" { return '='; }
 "+" { return '+'; }
 "-" { return '-'; }
@@ -26,7 +29,10 @@
 ">"  { return '>'; }
 "<"  { return '<'; }
 
-[a-zA-Z_][a-zA-Z0-9_]* { return IDENTIFIER; }
+[a-zA-Z_][a-zA-Z0-9_]* {
+    yylval.str = strdup(yytext);
+    return IDENTIFIER;
+}
 
 [ \t\n]+     ;
 

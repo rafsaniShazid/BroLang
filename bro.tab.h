@@ -64,15 +64,24 @@ extern int yydebug;
     WHILE = 265,                   /* WHILE  */
     RETURN = 266,                  /* RETURN  */
     BREAK = 267,                   /* BREAK  */
-    NUMBER = 268,                  /* NUMBER  */
-    IDENTIFIER = 269               /* IDENTIFIER  */
+    IDENTIFIER = 268,              /* IDENTIFIER  */
+    NUMBER = 269                   /* NUMBER  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+union YYSTYPE
+{
+#line 28 "bro.y"
+
+    char *str;
+
+#line 82 "bro.tab.h"
+
+};
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif
