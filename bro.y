@@ -24,7 +24,10 @@ statements:
 statement:
       declaration
     | assignment
-    ;
+    | if_statement
+    | loop_statement
+    | print_statement
+;
 
 declaration:
     INT IDENTIFIER
@@ -38,6 +41,30 @@ assignment:
     {
         printf("Assigned expression\n");
     }
+if_statement:
+    IF condition
+    {
+        printf("If condition detected\n");
+    }
+;
+loop_statement:
+    WHILE condition
+    {
+        printf("Loop detected\n");
+    }
+;
+
+condition:
+      expression '>' expression
+    | expression '<' expression
+;
+print_statement:
+    COUT IDENTIFIER
+    {
+        printf("Print statement\n");
+    }
+;
+
 expression:
       NUMBER
     | IDENTIFIER
