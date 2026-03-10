@@ -77,6 +77,7 @@ void yyerror(const char *s);
 int yylex(void);
 
 FILE *out;
+int block_count = 0;
 #define MAX_SYMBOLS 100
 
 char symbol_table[MAX_SYMBOLS][50];
@@ -95,7 +96,7 @@ void insert(char *var) {
     symbol_count++;
 }
 
-#line 99 "bro.tab.c"
+#line 100 "bro.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -540,11 +541,11 @@ static const yytype_int8 yytranslate[] =
 
 #if YYDEBUG
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_int8 yyrline[] =
+static const yytype_uint8 yyrline[] =
 {
-       0,    42,    42,    46,    47,    51,    52,    53,    54,    55,
-      59,    67,    78,    84,    91,    92,    95,   102,   104,   106,
-     112,   118,   124
+       0,    43,    43,    47,    48,    52,    53,    54,    55,    56,
+      60,    68,    79,    87,    95,   101,   110,   117,   119,   121,
+     127,   133,   139
 };
 #endif
 
@@ -1126,16 +1127,16 @@ yyreduce:
   switch (yyn)
     {
   case 10: /* declaration: INT IDENTIFIER  */
-#line 60 "bro.y"
+#line 61 "bro.y"
     {
         insert((yyvsp[0].str));
         fprintf(out, "    int %s;\n", (yyvsp[0].str));
     }
-#line 1135 "bro.tab.c"
+#line 1136 "bro.tab.c"
     break;
 
   case 11: /* assignment: IDENTIFIER '=' expression  */
-#line 68 "bro.y"
+#line 69 "bro.y"
     {
         if(!lookup((yyvsp[-2].str))) {
             printf("Error: variable %s not declared\n", (yyvsp[-2].str));
@@ -1143,87 +1144,109 @@ yyreduce:
             fprintf(out, "    %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].str));
         }
     }
-#line 1147 "bro.tab.c"
+#line 1148 "bro.tab.c"
     break;
 
   case 12: /* if_statement: IF condition  */
-#line 79 "bro.y"
+#line 80 "bro.y"
     {
-        printf("If condition detected\n");
+        fprintf(out, "    if(%s) {\n", (yyvsp[0].str));
+        block_count++;
     }
-#line 1155 "bro.tab.c"
+#line 1157 "bro.tab.c"
     break;
 
   case 13: /* loop_statement: WHILE condition  */
-#line 85 "bro.y"
+#line 88 "bro.y"
     {
-        printf("Loop detected\n");
+        fprintf(out, "    while(%s) {\n", (yyvsp[0].str));
+        block_count++;
     }
-#line 1163 "bro.tab.c"
+#line 1166 "bro.tab.c"
+    break;
+
+  case 14: /* condition: expression '>' expression  */
+#line 96 "bro.y"
+      {
+          char *temp = malloc(100);
+          sprintf(temp, "%s > %s", (yyvsp[-2].str), (yyvsp[0].str));
+          (yyval.str) = temp;
+      }
+#line 1176 "bro.tab.c"
+    break;
+
+  case 15: /* condition: expression '<' expression  */
+#line 102 "bro.y"
+      {
+          char *temp = malloc(100);
+          sprintf(temp, "%s < %s", (yyvsp[-2].str), (yyvsp[0].str));
+          (yyval.str) = temp;
+      }
+#line 1186 "bro.tab.c"
     break;
 
   case 16: /* print_statement: COUT IDENTIFIER  */
-#line 96 "bro.y"
+#line 111 "bro.y"
     {
         fprintf(out, "    cout << %s << endl;\n", (yyvsp[0].str));
     }
-#line 1171 "bro.tab.c"
+#line 1194 "bro.tab.c"
     break;
 
   case 17: /* expression: NUMBER  */
-#line 103 "bro.y"
+#line 118 "bro.y"
         { (yyval.str) = (yyvsp[0].str); }
-#line 1177 "bro.tab.c"
+#line 1200 "bro.tab.c"
     break;
 
   case 18: /* expression: IDENTIFIER  */
-#line 105 "bro.y"
+#line 120 "bro.y"
         { (yyval.str) = (yyvsp[0].str); }
-#line 1183 "bro.tab.c"
+#line 1206 "bro.tab.c"
     break;
 
   case 19: /* expression: expression '+' expression  */
-#line 107 "bro.y"
+#line 122 "bro.y"
         {
             char *temp = malloc(100);
             sprintf(temp, "%s + %s", (yyvsp[-2].str), (yyvsp[0].str));
             (yyval.str) = temp;
         }
-#line 1193 "bro.tab.c"
+#line 1216 "bro.tab.c"
     break;
 
   case 20: /* expression: expression '-' expression  */
-#line 113 "bro.y"
+#line 128 "bro.y"
         {
             char *temp = malloc(100);
             sprintf(temp, "%s - %s", (yyvsp[-2].str), (yyvsp[0].str));
             (yyval.str) = temp;
         }
-#line 1203 "bro.tab.c"
+#line 1226 "bro.tab.c"
     break;
 
   case 21: /* expression: expression '*' expression  */
-#line 119 "bro.y"
+#line 134 "bro.y"
         {
             char *temp = malloc(100);
             sprintf(temp, "%s * %s", (yyvsp[-2].str), (yyvsp[0].str));
             (yyval.str) = temp;
         }
-#line 1213 "bro.tab.c"
+#line 1236 "bro.tab.c"
     break;
 
   case 22: /* expression: expression '/' expression  */
-#line 125 "bro.y"
+#line 140 "bro.y"
         {
             char *temp = malloc(100);
             sprintf(temp, "%s / %s", (yyvsp[-2].str), (yyvsp[0].str));
             (yyval.str) = temp;
         }
-#line 1223 "bro.tab.c"
+#line 1246 "bro.tab.c"
     break;
 
 
-#line 1227 "bro.tab.c"
+#line 1250 "bro.tab.c"
 
       default: break;
     }
@@ -1416,7 +1439,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 131 "bro.y"
+#line 146 "bro.y"
 
 
 void yyerror(const char *s) {
@@ -1433,6 +1456,10 @@ int main() {
 
     yyparse();
 
+    while(block_count > 0) {
+    fprintf(out, "    }\n");
+    block_count--;
+}
     fprintf(out, "}\n");
 
     fclose(out);

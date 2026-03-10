@@ -1,3 +1,5 @@
 bro x
-x = 5 + 3
+x = 0
+loopbro x < 5
+x = x + 1
 saybro x

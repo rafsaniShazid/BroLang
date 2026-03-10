@@ -7,6 +7,7 @@ void yyerror(const char *s);
 int yylex(void);
 
 FILE *out;
+int block_count = 0;
 #define MAX_SYMBOLS 100
 
 char symbol_table[MAX_SYMBOLS][50];
@@ -32,7 +33,7 @@ void insert(char *var) {
 %token INT LONG_LONG FLOAT COUT CIN IF ELSE WHILE RETURN BREAK
 %token <str> IDENTIFIER
 %token <str> NUMBER
-%type <str> expression
+%type <str> expression condition
 
 %left '+' '-'
 %left '*' '/'
@@ -77,20 +78,34 @@ assignment:
 if_statement:
     IF condition
     {
-        printf("If condition detected\n");
+        fprintf(out, "    if(%s) {\n", $2);
+        block_count++;
     }
 ;
+
 loop_statement:
     WHILE condition
     {
-        printf("Loop detected\n");
+        fprintf(out, "    while(%s) {\n", $2);
+        block_count++;
     }
 ;
 
 condition:
       expression '>' expression
+      {
+          char *temp = malloc(100);
+          sprintf(temp, "%s > %s", $1, $3);
+          $$ = temp;
+      }
     | expression '<' expression
+      {
+          char *temp = malloc(100);
+          sprintf(temp, "%s < %s", $1, $3);
+          $$ = temp;
+      }
 ;
+
 print_statement:
     COUT IDENTIFIER
     {
@@ -144,6 +159,10 @@ int main() {
 
     yyparse();
 
+    while(block_count > 0) {
+    fprintf(out, "    }\n");
+    block_count--;
+}
     fprintf(out, "}\n");
 
     fclose(out);
