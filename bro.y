@@ -61,9 +61,21 @@ statement:
     | declaration_init
     | assignment
     | increment_statement
+    | input_statement
     | if_statement
     | loop_statement
     | print_statement
+;
+
+input_statement:
+    CIN IDENTIFIER
+    {
+        if(!lookup($2)) {
+            printf("Error: variable %s not declared\n", $2);
+        } else {
+            fprintf(out, "    cin >> %s;\n", $2);
+        }
+    }
 ;
 
 declaration:
@@ -71,6 +83,16 @@ declaration:
     {
         insert($2);
         fprintf(out, "    int %s;\n", $2);
+    }
+    | LONG_LONG IDENTIFIER
+    {
+        insert($2);
+        fprintf(out, "    long long %s;\n", $2);
+    }
+    | FLOAT IDENTIFIER
+    {
+        insert($2);
+        fprintf(out, "    float %s;\n", $2);
     }
 ;
 
@@ -80,6 +102,18 @@ declaration_init:
         insert($2);
         fprintf(icg, "%s = %s\n", $2, $4);
         fprintf(out, "    int %s = %s;\n", $2, $4);
+    }
+    | LONG_LONG IDENTIFIER '=' expression
+    {
+        insert($2);
+        fprintf(icg, "%s = %s\n", $2, $4);
+        fprintf(out, "    long long %s = %s;\n", $2, $4);
+    }
+    | FLOAT IDENTIFIER '=' expression
+    {
+        insert($2);
+        fprintf(icg, "%s = %s\n", $2, $4);
+        fprintf(out, "    float %s = %s;\n", $2, $4);
     }
 ;
 
@@ -107,10 +141,21 @@ assignment:
     }
 ;
 
-if_statement:
+if_head:
     IF condition
     {
         fprintf(out,"    if(%s) {\n",$2);
+    }
+;
+
+if_statement:
+    if_head '{' statements '}'
+    {
+        fprintf(out,"    }\n");
+    }
+    | if_head '{' statements '}' ELSE
+    {
+        fprintf(out,"    } else {\n");
     }
     '{' statements '}'
     {
