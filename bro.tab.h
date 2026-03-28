@@ -65,10 +65,11 @@ extern int yydebug;
     RETURN = 266,                  /* RETURN  */
     BREAK = 267,                   /* BREAK  */
     INC = 268,                     /* INC  */
-    EQ = 269,                      /* EQ  */
-    IDENTIFIER = 270,              /* IDENTIFIER  */
-    NUMBER = 271,                  /* NUMBER  */
-    STRING = 272                   /* STRING  */
+    DEC = 269,                     /* DEC  */
+    EQ = 270,                      /* EQ  */
+    IDENTIFIER = 271,              /* IDENTIFIER  */
+    NUMBER = 272,                  /* NUMBER  */
+    STRING = 273                   /* STRING  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -81,7 +82,7 @@ union YYSTYPE
 
     char *str;
 
-#line 85 "bro.tab.h"
+#line 86 "bro.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

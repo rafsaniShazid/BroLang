@@ -19,12 +19,16 @@
 
 "{"  { return '{'; }
 "}"  { return '}'; }
+"("  { return '('; }
+")"  { return ')'; }
+";"  { return ';'; }
 [0-9]+ {
     yylval.str = strdup(yytext);
     return NUMBER;
 }
 "=" { return '='; }
 "++" { return INC; }
+"--" { return DEC; }
 "+" { return '+'; }
 "-" { return '-'; }
 "*" { return '*'; }

@@ -37,7 +37,7 @@ void insert(char *var) {
     char *str;
 }
 
-%token INT LONG_LONG FLOAT COUT CIN IF ELSE WHILE RETURN BREAK INC EQ
+%token INT LONG_LONG FLOAT COUT CIN IF ELSE WHILE RETURN BREAK INC DEC EQ
 %token <str> IDENTIFIER
 %token <str> NUMBER
 %token <str> STRING
@@ -57,14 +57,15 @@ statements:
     ;
 
 statement:
-      declaration
-    | declaration_init
-    | assignment
-    | increment_statement
-    | input_statement
+            declaration ';'
+        | declaration_init ';'
+        | assignment ';'
+        | increment_statement ';'
+        | decrement_statement ';'
+        | input_statement ';'
     | if_statement
     | loop_statement
-    | print_statement
+        | print_statement ';'
 ;
 
 input_statement:
@@ -129,6 +130,18 @@ increment_statement:
     }
 ;
 
+decrement_statement:
+    IDENTIFIER DEC
+    {
+        if(!lookup($1)) {
+            printf("Error: variable %s not declared\n", $1);
+        } else {
+            fprintf(icg, "%s = %s - 1\n", $1, $1);
+            fprintf(out, "    %s--;\n", $1);
+        }
+    }
+;
+
 assignment:
     IDENTIFIER '=' expression
     {
@@ -142,9 +155,9 @@ assignment:
 ;
 
 if_head:
-    IF condition
+    IF '(' condition ')'
     {
-        fprintf(out,"    if(%s) {\n",$2);
+        fprintf(out,"    if(%s) {\n",$3);
     }
 ;
 
@@ -164,9 +177,9 @@ if_statement:
 ;
 
 loop_statement:
-    WHILE condition
+    WHILE '(' condition ')'
     {
-        fprintf(out,"    while(%s) {\n",$2);
+        fprintf(out,"    while(%s) {\n",$3);
     }
     '{' statements '}'
     {
@@ -198,7 +211,11 @@ condition:
 print_statement:
     COUT IDENTIFIER
     {
-        fprintf(out, "    cout << %s << endl;\n", $2);
+        if(!lookup($2)) {
+            printf("Error: variable %s not declared\n", $2);
+        } else {
+            fprintf(out, "    cout << %s << endl;\n", $2);
+        }
     }
     | COUT STRING
     {
@@ -211,7 +228,14 @@ expression:
         { $$ = $1; }
 
     | IDENTIFIER
-        { $$ = $1; }
+        {
+            if(!lookup($1)) {
+                printf("Error: variable %s not declared\n", $1);
+                $$ = "0";
+            } else {
+                $$ = $1;
+            }
+        }
 
 | expression '+' expression
 {

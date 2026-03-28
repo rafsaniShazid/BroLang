@@ -2,14 +2,9 @@
 using namespace std;
 
 int main() {
-    int x;
-    x = 5;
     int i = 0;
-    while(y > i) {
+    while(i < 3) {
     cout << i << endl;
-    if(i == 4) {
-    cout << "yahoo 4" << endl;
-    }
     i++;
     }
 }
