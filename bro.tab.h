@@ -57,19 +57,20 @@ extern int yydebug;
     INT = 258,                     /* INT  */
     LONG_LONG = 259,               /* LONG_LONG  */
     FLOAT = 260,                   /* FLOAT  */
-    COUT = 261,                    /* COUT  */
-    CIN = 262,                     /* CIN  */
-    IF = 263,                      /* IF  */
-    ELSE = 264,                    /* ELSE  */
-    WHILE = 265,                   /* WHILE  */
-    RETURN = 266,                  /* RETURN  */
-    BREAK = 267,                   /* BREAK  */
-    INC = 268,                     /* INC  */
-    DEC = 269,                     /* DEC  */
-    EQ = 270,                      /* EQ  */
-    IDENTIFIER = 271,              /* IDENTIFIER  */
-    NUMBER = 272,                  /* NUMBER  */
-    STRING = 273                   /* STRING  */
+    STR = 261,                     /* STR  */
+    COUT = 262,                    /* COUT  */
+    CIN = 263,                     /* CIN  */
+    IF = 264,                      /* IF  */
+    ELSE = 265,                    /* ELSE  */
+    WHILE = 266,                   /* WHILE  */
+    RETURN = 267,                  /* RETURN  */
+    BREAK = 268,                   /* BREAK  */
+    INC = 269,                     /* INC  */
+    DEC = 270,                     /* DEC  */
+    EQ = 271,                      /* EQ  */
+    IDENTIFIER = 272,              /* IDENTIFIER  */
+    NUMBER = 273,                  /* NUMBER  */
+    STRING = 274                   /* STRING  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -78,11 +79,11 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 36 "bro.y"
+#line 81 "bro.y"
 
     char *str;
 
-#line 86 "bro.tab.h"
+#line 87 "bro.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

@@ -3,12 +3,13 @@
 #include "bro.tab.h"
 %}
 
-%option noyywrap
+%option noyywrap yylineno
 
 %%
 "bro"        { return INT; }
 "bigbro"     { return LONG_LONG; }
 "lowkey"     { return FLOAT; }
+"textbro"    { return STR; }
 "saybro"     { return COUT; }
 "askbro"     { return CIN; }
 "ifbro"      { return IF; }
@@ -33,6 +34,7 @@
 "-" { return '-'; }
 "*" { return '*'; }
 "/" { return '/'; }
+"%" { return '%'; }
 ">"  { return '>'; }
 "<"  { return '<'; }
 "=="  { return EQ; }
