@@ -17,17 +17,23 @@
 "yeet"       { return RETURN; }
 "rip"        { return BREAK; }
 
+"{"  { return '{'; }
+"}"  { return '}'; }
 [0-9]+ {
     yylval.str = strdup(yytext);
     return NUMBER;
 }
 "=" { return '='; }
+"++" { return INC; }
 "+" { return '+'; }
 "-" { return '-'; }
 "*" { return '*'; }
 "/" { return '/'; }
 ">"  { return '>'; }
 "<"  { return '<'; }
+"=="  { return EQ; }
+
+\"[^\"]*\" { yylval.str = strdup(yytext); return STRING; }
 
 [a-zA-Z_][a-zA-Z0-9_]* {
     yylval.str = strdup(yytext);

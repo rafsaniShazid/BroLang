@@ -3,9 +3,13 @@ using namespace std;
 
 int main() {
     int x;
-    x = 0;
-    while(x < 5) {
-    x = x + 1;
-    cout << x << endl;
+    x = 5;
+    int i = 0;
+    while(y > i) {
+    cout << i << endl;
+    if(i == 4) {
+    cout << "yahoo 4" << endl;
+    }
+    i++;
     }
 }

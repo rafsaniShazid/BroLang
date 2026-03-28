@@ -64,8 +64,11 @@ extern int yydebug;
     WHILE = 265,                   /* WHILE  */
     RETURN = 266,                  /* RETURN  */
     BREAK = 267,                   /* BREAK  */
-    IDENTIFIER = 268,              /* IDENTIFIER  */
-    NUMBER = 269                   /* NUMBER  */
+    INC = 268,                     /* INC  */
+    EQ = 269,                      /* EQ  */
+    IDENTIFIER = 270,              /* IDENTIFIER  */
+    NUMBER = 271,                  /* NUMBER  */
+    STRING = 272                   /* STRING  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -74,11 +77,11 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 29 "bro.y"
+#line 36 "bro.y"
 
     char *str;
 
-#line 82 "bro.tab.h"
+#line 85 "bro.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

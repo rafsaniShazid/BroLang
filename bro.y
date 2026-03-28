@@ -7,8 +7,15 @@ void yyerror(const char *s);
 int yylex(void);
 
 FILE *out;
-int block_count = 0;
+FILE *icg;
 #define MAX_SYMBOLS 100
+int temp_count = 1;
+
+char* new_temp() {
+    char *temp = malloc(10);
+    sprintf(temp, "t%d", temp_count++);
+    return temp;
+}
 
 char symbol_table[MAX_SYMBOLS][50];
 int symbol_count = 0;
@@ -30,9 +37,10 @@ void insert(char *var) {
     char *str;
 }
 
-%token INT LONG_LONG FLOAT COUT CIN IF ELSE WHILE RETURN BREAK
+%token INT LONG_LONG FLOAT COUT CIN IF ELSE WHILE RETURN BREAK INC EQ
 %token <str> IDENTIFIER
 %token <str> NUMBER
+%token <str> STRING
 %type <str> expression condition
 
 %left '+' '-'
@@ -50,7 +58,9 @@ statements:
 
 statement:
       declaration
+    | declaration_init
     | assignment
+    | increment_statement
     | if_statement
     | loop_statement
     | print_statement
@@ -64,12 +74,34 @@ declaration:
     }
 ;
 
+declaration_init:
+    INT IDENTIFIER '=' expression
+    {
+        insert($2);
+        fprintf(icg, "%s = %s\n", $2, $4);
+        fprintf(out, "    int %s = %s;\n", $2, $4);
+    }
+;
+
+increment_statement:
+    IDENTIFIER INC
+    {
+        if(!lookup($1)) {
+            printf("Error: variable %s not declared\n", $1);
+        } else {
+            fprintf(icg, "%s = %s + 1\n", $1, $1);
+            fprintf(out, "    %s++;\n", $1);
+        }
+    }
+;
+
 assignment:
     IDENTIFIER '=' expression
     {
         if(!lookup($1)) {
             printf("Error: variable %s not declared\n", $1);
         } else {
+            fprintf(icg, "%s = %s\n", $1, $3);
             fprintf(out, "    %s = %s;\n", $1, $3);
         }
     }
@@ -78,16 +110,22 @@ assignment:
 if_statement:
     IF condition
     {
-        fprintf(out, "    if(%s) {\n", $2);
-        block_count++;
+        fprintf(out,"    if(%s) {\n",$2);
+    }
+    '{' statements '}'
+    {
+        fprintf(out,"    }\n");
     }
 ;
 
 loop_statement:
     WHILE condition
     {
-        fprintf(out, "    while(%s) {\n", $2);
-        block_count++;
+        fprintf(out,"    while(%s) {\n",$2);
+    }
+    '{' statements '}'
+    {
+        fprintf(out,"    }\n");
     }
 ;
 
@@ -104,10 +142,20 @@ condition:
           sprintf(temp, "%s < %s", $1, $3);
           $$ = temp;
       }
+    | expression EQ expression
+      {
+          char *temp = malloc(100);
+          sprintf(temp, "%s == %s", $1, $3);
+          $$ = temp;
+      }
 ;
 
 print_statement:
     COUT IDENTIFIER
+    {
+        fprintf(out, "    cout << %s << endl;\n", $2);
+    }
+    | COUT STRING
     {
         fprintf(out, "    cout << %s << endl;\n", $2);
     }
@@ -116,32 +164,49 @@ print_statement:
 expression:
       NUMBER
         { $$ = $1; }
+
     | IDENTIFIER
         { $$ = $1; }
-    | expression '+' expression
-        {
-            char *temp = malloc(100);
-            sprintf(temp, "%s + %s", $1, $3);
-            $$ = temp;
-        }
-    | expression '-' expression
-        {
-            char *temp = malloc(100);
-            sprintf(temp, "%s - %s", $1, $3);
-            $$ = temp;
-        }
-    | expression '*' expression
-        {
-            char *temp = malloc(100);
-            sprintf(temp, "%s * %s", $1, $3);
-            $$ = temp;
-        }
-    | expression '/' expression
-        {
-            char *temp = malloc(100);
-            sprintf(temp, "%s / %s", $1, $3);
-            $$ = temp;
-        }
+
+| expression '+' expression
+{
+    char *temp = new_temp();
+    fprintf(icg, "%s = %s + %s\n", temp, $1, $3);
+
+    char *expr = malloc(100);
+    sprintf(expr, "%s + %s", $1, $3);
+    $$ = expr;
+}
+
+| expression '-' expression
+{
+    char *temp = new_temp();
+    fprintf(icg, "%s = %s - %s\n", temp, $1, $3);
+
+    char *expr = malloc(100);
+    sprintf(expr, "%s - %s", $1, $3);
+    $$ = expr;
+}
+
+| expression '*' expression
+{
+    char *temp = new_temp();
+    fprintf(icg, "%s = %s * %s\n", temp, $1, $3);
+
+    char *expr = malloc(100);
+    sprintf(expr, "%s * %s", $1, $3);
+    $$ = expr;
+}
+
+| expression '/' expression
+{
+    char *temp = new_temp();
+    fprintf(icg, "%s = %s / %s\n", temp, $1, $3);
+
+    char *expr = malloc(100);
+    sprintf(expr, "%s / %s", $1, $3);
+    $$ = expr;
+}
 ;
 %%
 
@@ -152,6 +217,7 @@ void yyerror(const char *s) {
 int main() {
 
     out = fopen("output.cpp", "w");
+    icg = fopen("intermediate.txt", "w");
 
     fprintf(out, "#include <iostream>\n");
     fprintf(out, "using namespace std;\n\n");
@@ -159,15 +225,13 @@ int main() {
 
     yyparse();
 
-    while(block_count > 0) {
-    fprintf(out, "    }\n");
-    block_count--;
-}
     fprintf(out, "}\n");
 
     fclose(out);
+    fclose(icg);
 
     printf("C++ code generated in output.cpp\n");
+    printf("Intermediate code generated in intermediate.txt\n");
 
     return 0;
 }
