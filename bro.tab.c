@@ -84,6 +84,9 @@ FILE *icg;
 int temp_count = 1;
 int loop_depth = 0;
 
+typedef struct ExprNode ExprNode;
+ExprNode* make_expr(const char *text, int type);
+
 enum {
     TYPE_INT = 1,
     TYPE_LONG_LONG,
@@ -111,6 +114,34 @@ int lookup_index(char *var) {
 
 int lookup(char *var) {
     return lookup_index(var) != -1;
+}
+
+int is_numeric_type(int type) {
+    return type == TYPE_INT || type == TYPE_LONG_LONG || type == TYPE_FLOAT;
+}
+
+const char* type_name(int type) {
+    if (type == TYPE_INT) return "bro";
+    if (type == TYPE_LONG_LONG) return "bigbro";
+    if (type == TYPE_FLOAT) return "lowkey";
+    if (type == TYPE_STRING) return "textbro";
+    return "unknown";
+}
+
+int promote_numeric_type(int a, int b) {
+    return (a > b) ? a : b;
+}
+
+int can_assign_numeric(int target, int source) {
+    if (!is_numeric_type(target) || !is_numeric_type(source)) return 0;
+    if (target == TYPE_FLOAT) return 1;
+    if (target == TYPE_LONG_LONG) return source == TYPE_INT || source == TYPE_LONG_LONG;
+    if (target == TYPE_INT) return source == TYPE_INT;
+    return 0;
+}
+
+int literal_numeric_type(const char *literal) {
+    return strchr(literal, '.') ? TYPE_FLOAT : TYPE_INT;
 }
 
 int get_type(char *var) {
@@ -148,7 +179,7 @@ int is_statement_starter(const char *tok) {
            is_identifier_like(tok);
 }
 
-#line 152 "bro.tab.c"
+#line 183 "bro.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -618,12 +649,12 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,    96,    96,   100,   101,   105,   106,   107,   108,   109,
-     110,   111,   112,   113,   114,   115,   116,   120,   131,   136,
-     144,   155,   160,   165,   170,   178,   184,   190,   196,   205,
-     219,   233,   247,   261,   268,   273,   272,   284,   288,   283,
-     299,   305,   311,   320,   328,   335,   338,   351,   361,   371,
-     381,   391
+       0,   137,   137,   141,   142,   146,   147,   148,   149,   150,
+     151,   152,   153,   154,   155,   156,   157,   161,   172,   177,
+     185,   196,   201,   206,   211,   219,   230,   241,   252,   261,
+     275,   289,   303,   319,   326,   331,   330,   342,   346,   341,
+     357,   363,   369,   378,   386,   393,   398,   411,   421,   431,
+     441,   451
 };
 #endif
 
@@ -1255,7 +1286,7 @@ yyreduce:
   switch (yyn)
     {
   case 17: /* break_statement: BREAK  */
-#line 121 "bro.y"
+#line 162 "bro.y"
     {
         if(loop_depth <= 0) {
             printf("Error: rip used outside loop\n");
@@ -1263,29 +1294,29 @@ yyreduce:
             fprintf(out, "    break;\n");
         }
     }
-#line 1267 "bro.tab.c"
+#line 1298 "bro.tab.c"
     break;
 
   case 18: /* return_statement: RETURN  */
-#line 132 "bro.y"
+#line 173 "bro.y"
     {
         fprintf(icg, "return 0\n");
         fprintf(out, "    return 0;\n");
     }
-#line 1276 "bro.tab.c"
+#line 1307 "bro.tab.c"
     break;
 
   case 19: /* return_statement: RETURN expression  */
-#line 137 "bro.y"
+#line 178 "bro.y"
     {
-        fprintf(icg, "return %s\n", (yyvsp[0].str));
-        fprintf(out, "    return %s;\n", (yyvsp[0].str));
+        fprintf(icg, "return %s\n", (yyvsp[0].expr)->text);
+        fprintf(out, "    return %s;\n", (yyvsp[0].expr)->text);
     }
-#line 1285 "bro.tab.c"
+#line 1316 "bro.tab.c"
     break;
 
   case 20: /* input_statement: CIN IDENTIFIER  */
-#line 145 "bro.y"
+#line 186 "bro.y"
     {
         if(!lookup((yyvsp[0].str))) {
             printf("Error: variable %s not declared\n", (yyvsp[0].str));
@@ -1293,87 +1324,102 @@ yyreduce:
             fprintf(out, "    cin >> %s;\n", (yyvsp[0].str));
         }
     }
-#line 1297 "bro.tab.c"
+#line 1328 "bro.tab.c"
     break;
 
   case 21: /* declaration: INT IDENTIFIER  */
-#line 156 "bro.y"
+#line 197 "bro.y"
     {
         insert((yyvsp[0].str), TYPE_INT);
         fprintf(out, "    int %s;\n", (yyvsp[0].str));
     }
-#line 1306 "bro.tab.c"
+#line 1337 "bro.tab.c"
     break;
 
   case 22: /* declaration: LONG_LONG IDENTIFIER  */
-#line 161 "bro.y"
+#line 202 "bro.y"
     {
         insert((yyvsp[0].str), TYPE_LONG_LONG);
         fprintf(out, "    long long %s;\n", (yyvsp[0].str));
     }
-#line 1315 "bro.tab.c"
+#line 1346 "bro.tab.c"
     break;
 
   case 23: /* declaration: FLOAT IDENTIFIER  */
-#line 166 "bro.y"
+#line 207 "bro.y"
     {
         insert((yyvsp[0].str), TYPE_FLOAT);
         fprintf(out, "    float %s;\n", (yyvsp[0].str));
     }
-#line 1324 "bro.tab.c"
+#line 1355 "bro.tab.c"
     break;
 
   case 24: /* declaration: STR IDENTIFIER  */
-#line 171 "bro.y"
+#line 212 "bro.y"
     {
         insert((yyvsp[0].str), TYPE_STRING);
         fprintf(out, "    string %s;\n", (yyvsp[0].str));
     }
-#line 1333 "bro.tab.c"
+#line 1364 "bro.tab.c"
     break;
 
   case 25: /* declaration_init: INT IDENTIFIER '=' expression  */
-#line 179 "bro.y"
+#line 220 "bro.y"
     {
         insert((yyvsp[-2].str), TYPE_INT);
-        fprintf(icg, "%s = %s\n", (yyvsp[-2].str), (yyvsp[0].str));
-        fprintf(out, "    int %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].str));
+        if(!can_assign_numeric(TYPE_INT, (yyvsp[0].expr)->type)) {
+            printf("Type error: cannot assign %s expression to bro variable %s\n", type_name((yyvsp[0].expr)->type), (yyvsp[-2].str));
+            fprintf(out, "    int %s;\n", (yyvsp[-2].str));
+        } else {
+            fprintf(icg, "%s = %s\n", (yyvsp[-2].str), (yyvsp[0].expr)->text);
+            fprintf(out, "    int %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].expr)->text);
+        }
     }
-#line 1343 "bro.tab.c"
+#line 1379 "bro.tab.c"
     break;
 
   case 26: /* declaration_init: LONG_LONG IDENTIFIER '=' expression  */
-#line 185 "bro.y"
+#line 231 "bro.y"
     {
         insert((yyvsp[-2].str), TYPE_LONG_LONG);
-        fprintf(icg, "%s = %s\n", (yyvsp[-2].str), (yyvsp[0].str));
-        fprintf(out, "    long long %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].str));
+        if(!can_assign_numeric(TYPE_LONG_LONG, (yyvsp[0].expr)->type)) {
+            printf("Type error: cannot assign %s expression to bigbro variable %s\n", type_name((yyvsp[0].expr)->type), (yyvsp[-2].str));
+            fprintf(out, "    long long %s;\n", (yyvsp[-2].str));
+        } else {
+            fprintf(icg, "%s = %s\n", (yyvsp[-2].str), (yyvsp[0].expr)->text);
+            fprintf(out, "    long long %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].expr)->text);
+        }
     }
-#line 1353 "bro.tab.c"
+#line 1394 "bro.tab.c"
     break;
 
   case 27: /* declaration_init: FLOAT IDENTIFIER '=' expression  */
-#line 191 "bro.y"
+#line 242 "bro.y"
     {
         insert((yyvsp[-2].str), TYPE_FLOAT);
-        fprintf(icg, "%s = %s\n", (yyvsp[-2].str), (yyvsp[0].str));
-        fprintf(out, "    float %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].str));
+        if(!can_assign_numeric(TYPE_FLOAT, (yyvsp[0].expr)->type)) {
+            printf("Type error: cannot assign %s expression to lowkey variable %s\n", type_name((yyvsp[0].expr)->type), (yyvsp[-2].str));
+            fprintf(out, "    float %s;\n", (yyvsp[-2].str));
+        } else {
+            fprintf(icg, "%s = %s\n", (yyvsp[-2].str), (yyvsp[0].expr)->text);
+            fprintf(out, "    float %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].expr)->text);
+        }
     }
-#line 1363 "bro.tab.c"
+#line 1409 "bro.tab.c"
     break;
 
   case 28: /* declaration_init: STR IDENTIFIER '=' STRING  */
-#line 197 "bro.y"
+#line 253 "bro.y"
     {
         insert((yyvsp[-2].str), TYPE_STRING);
         fprintf(icg, "%s = %s\n", (yyvsp[-2].str), (yyvsp[0].str));
         fprintf(out, "    string %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].str));
     }
-#line 1373 "bro.tab.c"
+#line 1419 "bro.tab.c"
     break;
 
   case 29: /* string_assignment: IDENTIFIER '=' STRING  */
-#line 206 "bro.y"
+#line 262 "bro.y"
     {
         if(!lookup((yyvsp[-2].str))) {
             printf("Error: variable %s not declared\n", (yyvsp[-2].str));
@@ -1384,11 +1430,11 @@ yyreduce:
             fprintf(out, "    %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].str));
         }
     }
-#line 1388 "bro.tab.c"
+#line 1434 "bro.tab.c"
     break;
 
   case 30: /* increment_statement: IDENTIFIER INC  */
-#line 220 "bro.y"
+#line 276 "bro.y"
     {
         if(!lookup((yyvsp[-1].str))) {
             printf("Error: variable %s not declared\n", (yyvsp[-1].str));
@@ -1399,11 +1445,11 @@ yyreduce:
             fprintf(out, "    %s++;\n", (yyvsp[-1].str));
         }
     }
-#line 1403 "bro.tab.c"
+#line 1449 "bro.tab.c"
     break;
 
   case 31: /* decrement_statement: IDENTIFIER DEC  */
-#line 234 "bro.y"
+#line 290 "bro.y"
     {
         if(!lookup((yyvsp[-1].str))) {
             printf("Error: variable %s not declared\n", (yyvsp[-1].str));
@@ -1414,113 +1460,115 @@ yyreduce:
             fprintf(out, "    %s--;\n", (yyvsp[-1].str));
         }
     }
-#line 1418 "bro.tab.c"
+#line 1464 "bro.tab.c"
     break;
 
   case 32: /* assignment: IDENTIFIER '=' expression  */
-#line 248 "bro.y"
+#line 304 "bro.y"
     {
         if(!lookup((yyvsp[-2].str))) {
             printf("Error: variable %s not declared\n", (yyvsp[-2].str));
         } else if(get_type((yyvsp[-2].str)) == TYPE_STRING) {
-            printf("Error: assign string literals to string variable %s\n", (yyvsp[-2].str));
+            printf("Type error: cannot assign numeric expression to textbro variable %s\n", (yyvsp[-2].str));
+        } else if(!can_assign_numeric(get_type((yyvsp[-2].str)), (yyvsp[0].expr)->type)) {
+            printf("Type error: cannot assign %s expression to %s variable %s\n", type_name((yyvsp[0].expr)->type), type_name(get_type((yyvsp[-2].str))), (yyvsp[-2].str));
         } else {
-            fprintf(icg, "%s = %s\n", (yyvsp[-2].str), (yyvsp[0].str));
-            fprintf(out, "    %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].str));
+            fprintf(icg, "%s = %s\n", (yyvsp[-2].str), (yyvsp[0].expr)->text);
+            fprintf(out, "    %s = %s;\n", (yyvsp[-2].str), (yyvsp[0].expr)->text);
         }
-    }
-#line 1433 "bro.tab.c"
-    break;
-
-  case 33: /* if_head: IF '(' condition ')'  */
-#line 262 "bro.y"
-    {
-        fprintf(out,"    if(%s) {\n",(yyvsp[-1].str));
-    }
-#line 1441 "bro.tab.c"
-    break;
-
-  case 34: /* if_statement: if_head '{' statements '}'  */
-#line 269 "bro.y"
-    {
-        fprintf(out,"    }\n");
-    }
-#line 1449 "bro.tab.c"
-    break;
-
-  case 35: /* $@1: %empty  */
-#line 273 "bro.y"
-    {
-        fprintf(out,"    } else {\n");
-    }
-#line 1457 "bro.tab.c"
-    break;
-
-  case 36: /* if_statement: if_head '{' statements '}' ELSE $@1 '{' statements '}'  */
-#line 277 "bro.y"
-    {
-        fprintf(out,"    }\n");
-    }
-#line 1465 "bro.tab.c"
-    break;
-
-  case 37: /* $@2: %empty  */
-#line 284 "bro.y"
-    {
-        fprintf(out,"    while(%s) {\n",(yyvsp[-1].str));
-    }
-#line 1473 "bro.tab.c"
-    break;
-
-  case 38: /* $@3: %empty  */
-#line 288 "bro.y"
-    {
-        loop_depth++;
     }
 #line 1481 "bro.tab.c"
     break;
 
+  case 33: /* if_head: IF '(' condition ')'  */
+#line 320 "bro.y"
+    {
+        fprintf(out,"    if(%s) {\n",(yyvsp[-1].str));
+    }
+#line 1489 "bro.tab.c"
+    break;
+
+  case 34: /* if_statement: if_head '{' statements '}'  */
+#line 327 "bro.y"
+    {
+        fprintf(out,"    }\n");
+    }
+#line 1497 "bro.tab.c"
+    break;
+
+  case 35: /* $@1: %empty  */
+#line 331 "bro.y"
+    {
+        fprintf(out,"    } else {\n");
+    }
+#line 1505 "bro.tab.c"
+    break;
+
+  case 36: /* if_statement: if_head '{' statements '}' ELSE $@1 '{' statements '}'  */
+#line 335 "bro.y"
+    {
+        fprintf(out,"    }\n");
+    }
+#line 1513 "bro.tab.c"
+    break;
+
+  case 37: /* $@2: %empty  */
+#line 342 "bro.y"
+    {
+        fprintf(out,"    while(%s) {\n",(yyvsp[-1].str));
+    }
+#line 1521 "bro.tab.c"
+    break;
+
+  case 38: /* $@3: %empty  */
+#line 346 "bro.y"
+    {
+        loop_depth++;
+    }
+#line 1529 "bro.tab.c"
+    break;
+
   case 39: /* loop_statement: WHILE '(' condition ')' $@2 '{' $@3 statements '}'  */
-#line 292 "bro.y"
+#line 350 "bro.y"
     {
         loop_depth--;
         fprintf(out,"    }\n");
     }
-#line 1490 "bro.tab.c"
+#line 1538 "bro.tab.c"
     break;
 
   case 40: /* condition: expression '>' expression  */
-#line 300 "bro.y"
+#line 358 "bro.y"
       {
           char *temp = malloc(100);
-          sprintf(temp, "%s > %s", (yyvsp[-2].str), (yyvsp[0].str));
+                    sprintf(temp, "%s > %s", (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
           (yyval.str) = temp;
       }
-#line 1500 "bro.tab.c"
+#line 1548 "bro.tab.c"
     break;
 
   case 41: /* condition: expression '<' expression  */
-#line 306 "bro.y"
+#line 364 "bro.y"
       {
           char *temp = malloc(100);
-          sprintf(temp, "%s < %s", (yyvsp[-2].str), (yyvsp[0].str));
+                    sprintf(temp, "%s < %s", (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
           (yyval.str) = temp;
       }
-#line 1510 "bro.tab.c"
+#line 1558 "bro.tab.c"
     break;
 
   case 42: /* condition: expression EQ expression  */
-#line 312 "bro.y"
+#line 370 "bro.y"
       {
           char *temp = malloc(100);
-          sprintf(temp, "%s == %s", (yyvsp[-2].str), (yyvsp[0].str));
+                    sprintf(temp, "%s == %s", (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
           (yyval.str) = temp;
       }
-#line 1520 "bro.tab.c"
+#line 1568 "bro.tab.c"
     break;
 
   case 43: /* print_statement: COUT IDENTIFIER  */
-#line 321 "bro.y"
+#line 379 "bro.y"
     {
         if(!lookup((yyvsp[0].str))) {
             printf("Error: variable %s not declared\n", (yyvsp[0].str));
@@ -1528,106 +1576,108 @@ yyreduce:
             fprintf(out, "    cout << %s << endl;\n", (yyvsp[0].str));
         }
     }
-#line 1532 "bro.tab.c"
+#line 1580 "bro.tab.c"
     break;
 
   case 44: /* print_statement: COUT STRING  */
-#line 329 "bro.y"
+#line 387 "bro.y"
     {
         fprintf(out, "    cout << %s << endl;\n", (yyvsp[0].str));
     }
-#line 1540 "bro.tab.c"
-    break;
-
-  case 45: /* expression: NUMBER  */
-#line 336 "bro.y"
-        { (yyval.str) = (yyvsp[0].str); }
-#line 1546 "bro.tab.c"
-    break;
-
-  case 46: /* expression: IDENTIFIER  */
-#line 339 "bro.y"
-        {
-            if(!lookup((yyvsp[0].str))) {
-                printf("Error: variable %s not declared\n", (yyvsp[0].str));
-                (yyval.str) = "0";
-            } else if(get_type((yyvsp[0].str)) == TYPE_STRING) {
-                printf("Error: string variable %s cannot be used in numeric expression\n", (yyvsp[0].str));
-                (yyval.str) = "0";
-            } else {
-                (yyval.str) = (yyvsp[0].str);
-            }
-        }
-#line 1562 "bro.tab.c"
-    break;
-
-  case 47: /* expression: expression '+' expression  */
-#line 352 "bro.y"
-{
-    char *temp = new_temp();
-    fprintf(icg, "%s = %s + %s\n", temp, (yyvsp[-2].str), (yyvsp[0].str));
-
-    char *expr = malloc(100);
-    sprintf(expr, "%s + %s", (yyvsp[-2].str), (yyvsp[0].str));
-    (yyval.str) = expr;
-}
-#line 1575 "bro.tab.c"
-    break;
-
-  case 48: /* expression: expression '-' expression  */
-#line 362 "bro.y"
-{
-    char *temp = new_temp();
-    fprintf(icg, "%s = %s - %s\n", temp, (yyvsp[-2].str), (yyvsp[0].str));
-
-    char *expr = malloc(100);
-    sprintf(expr, "%s - %s", (yyvsp[-2].str), (yyvsp[0].str));
-    (yyval.str) = expr;
-}
 #line 1588 "bro.tab.c"
     break;
 
-  case 49: /* expression: expression '*' expression  */
-#line 372 "bro.y"
+  case 45: /* expression: NUMBER  */
+#line 394 "bro.y"
+        {
+            (yyval.expr) = make_expr((yyvsp[0].str), literal_numeric_type((yyvsp[0].str)));
+        }
+#line 1596 "bro.tab.c"
+    break;
+
+  case 46: /* expression: IDENTIFIER  */
+#line 399 "bro.y"
+        {
+            if(!lookup((yyvsp[0].str))) {
+                printf("Error: variable %s not declared\n", (yyvsp[0].str));
+                (yyval.expr) = make_expr("0", TYPE_INT);
+            } else if(get_type((yyvsp[0].str)) == TYPE_STRING) {
+                printf("Error: string variable %s cannot be used in numeric expression\n", (yyvsp[0].str));
+                (yyval.expr) = make_expr("0", TYPE_INT);
+            } else {
+                (yyval.expr) = make_expr((yyvsp[0].str), get_type((yyvsp[0].str)));
+            }
+        }
+#line 1612 "bro.tab.c"
+    break;
+
+  case 47: /* expression: expression '+' expression  */
+#line 412 "bro.y"
 {
     char *temp = new_temp();
-    fprintf(icg, "%s = %s * %s\n", temp, (yyvsp[-2].str), (yyvsp[0].str));
+    fprintf(icg, "%s = %s + %s\n", temp, (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
 
     char *expr = malloc(100);
-    sprintf(expr, "%s * %s", (yyvsp[-2].str), (yyvsp[0].str));
-    (yyval.str) = expr;
+    sprintf(expr, "%s + %s", (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
+    (yyval.expr) = make_expr(expr, promote_numeric_type((yyvsp[-2].expr)->type, (yyvsp[0].expr)->type));
 }
-#line 1601 "bro.tab.c"
+#line 1625 "bro.tab.c"
+    break;
+
+  case 48: /* expression: expression '-' expression  */
+#line 422 "bro.y"
+{
+    char *temp = new_temp();
+    fprintf(icg, "%s = %s - %s\n", temp, (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
+
+    char *expr = malloc(100);
+    sprintf(expr, "%s - %s", (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
+    (yyval.expr) = make_expr(expr, promote_numeric_type((yyvsp[-2].expr)->type, (yyvsp[0].expr)->type));
+}
+#line 1638 "bro.tab.c"
+    break;
+
+  case 49: /* expression: expression '*' expression  */
+#line 432 "bro.y"
+{
+    char *temp = new_temp();
+    fprintf(icg, "%s = %s * %s\n", temp, (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
+
+    char *expr = malloc(100);
+    sprintf(expr, "%s * %s", (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
+    (yyval.expr) = make_expr(expr, promote_numeric_type((yyvsp[-2].expr)->type, (yyvsp[0].expr)->type));
+}
+#line 1651 "bro.tab.c"
     break;
 
   case 50: /* expression: expression '/' expression  */
-#line 382 "bro.y"
+#line 442 "bro.y"
 {
     char *temp = new_temp();
-    fprintf(icg, "%s = %s / %s\n", temp, (yyvsp[-2].str), (yyvsp[0].str));
+    fprintf(icg, "%s = %s / %s\n", temp, (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
 
     char *expr = malloc(100);
-    sprintf(expr, "%s / %s", (yyvsp[-2].str), (yyvsp[0].str));
-    (yyval.str) = expr;
+    sprintf(expr, "%s / %s", (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
+    (yyval.expr) = make_expr(expr, promote_numeric_type((yyvsp[-2].expr)->type, (yyvsp[0].expr)->type));
 }
-#line 1614 "bro.tab.c"
+#line 1664 "bro.tab.c"
     break;
 
   case 51: /* expression: expression '%' expression  */
-#line 392 "bro.y"
+#line 452 "bro.y"
 {
     char *temp = new_temp();
-    fprintf(icg, "%s = %s %% %s\n", temp, (yyvsp[-2].str), (yyvsp[0].str));
+    fprintf(icg, "%s = %s %% %s\n", temp, (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
 
     char *expr = malloc(100);
-    sprintf(expr, "%s %% %s", (yyvsp[-2].str), (yyvsp[0].str));
-    (yyval.str) = expr;
+    sprintf(expr, "%s %% %s", (yyvsp[-2].expr)->text, (yyvsp[0].expr)->text);
+    (yyval.expr) = make_expr(expr, promote_numeric_type((yyvsp[-2].expr)->type, (yyvsp[0].expr)->type));
 }
-#line 1627 "bro.tab.c"
+#line 1677 "bro.tab.c"
     break;
 
 
-#line 1631 "bro.tab.c"
+#line 1681 "bro.tab.c"
 
       default: break;
     }
@@ -1820,8 +1870,15 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 401 "bro.y"
+#line 461 "bro.y"
 
+
+ExprNode* make_expr(const char *text, int type) {
+    ExprNode *node = malloc(sizeof(ExprNode));
+    node->text = strdup(text);
+    node->type = type;
+    return node;
+}
 
 void yyerror(const char *s) {
     const char *tok = (yytext && yytext[0]) ? yytext : "EOF";
@@ -1833,12 +1890,6 @@ void yyerror(const char *s) {
 }
 
 int main() {
-    int verbose = 0;
-    const char *verbose_env = getenv("BRO_VERBOSE");
-    if (verbose_env && strcmp(verbose_env, "1") == 0) {
-        verbose = 1;
-    }
-
     out = fopen("output.cpp", "w");
     icg = fopen("intermediate.txt", "w");
 
@@ -1853,11 +1904,6 @@ int main() {
 
     fclose(out);
     fclose(icg);
-
-    if (verbose) {
-        printf("C++ code generated in output.cpp\n");
-        printf("Intermediate code generated in intermediate.txt\n");
-    }
 
     return 0;
 }

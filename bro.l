@@ -23,7 +23,7 @@
 "("  { return '('; }
 ")"  { return ')'; }
 ";"  { return ';'; }
-[0-9]+ {
+[0-9]+(\.[0-9]+)? {
     yylval.str = strdup(yytext);
     return NUMBER;
 }
@@ -48,5 +48,8 @@
 
 [ \t\n]+     ;
 
-.            { return yytext[0]; }
+. {
+    fprintf(stderr, "Lexical error at line %d: invalid token '%s'\n", yylineno, yytext);
+    /* Skip invalid character and continue scanning. */
+}
 %%

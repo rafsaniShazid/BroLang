@@ -53,18 +53,6 @@ By default, output is clean (only your program output).
 
 ## Useful Make Commands
 
-Run with build status lines:
-
-```bash
-make run PRINT_STATUS=1
-```
-
-Run with parser generation messages too:
-
-```bash
-make run-verbose PRINT_STATUS=1
-```
-
 Run with runtime input redirected from a file (for `askbro` programs):
 
 ```bash

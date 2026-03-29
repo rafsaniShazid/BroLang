@@ -14,6 +14,9 @@ FILE *icg;
 int temp_count = 1;
 int loop_depth = 0;
 
+typedef struct ExprNode ExprNode;
+ExprNode* make_expr(const char *text, int type);
+
 enum {
     TYPE_INT = 1,
     TYPE_LONG_LONG,
@@ -41,6 +44,34 @@ int lookup_index(char *var) {
 
 int lookup(char *var) {
     return lookup_index(var) != -1;
+}
+
+int is_numeric_type(int type) {
+    return type == TYPE_INT || type == TYPE_LONG_LONG || type == TYPE_FLOAT;
+}
+
+const char* type_name(int type) {
+    if (type == TYPE_INT) return "bro";
+    if (type == TYPE_LONG_LONG) return "bigbro";
+    if (type == TYPE_FLOAT) return "lowkey";
+    if (type == TYPE_STRING) return "textbro";
+    return "unknown";
+}
+
+int promote_numeric_type(int a, int b) {
+    return (a > b) ? a : b;
+}
+
+int can_assign_numeric(int target, int source) {
+    if (!is_numeric_type(target) || !is_numeric_type(source)) return 0;
+    if (target == TYPE_FLOAT) return 1;
+    if (target == TYPE_LONG_LONG) return source == TYPE_INT || source == TYPE_LONG_LONG;
+    if (target == TYPE_INT) return source == TYPE_INT;
+    return 0;
+}
+
+int literal_numeric_type(const char *literal) {
+    return strchr(literal, '.') ? TYPE_FLOAT : TYPE_INT;
 }
 
 int get_type(char *var) {
@@ -78,15 +109,25 @@ int is_statement_starter(const char *tok) {
            is_identifier_like(tok);
 }
 %}
+
+%code requires {
+typedef struct ExprNode {
+    char *text;
+    int type;
+} ExprNode;
+}
+
 %union {
     char *str;
+    ExprNode *expr;
 }
 
 %token INT LONG_LONG FLOAT STR COUT CIN IF ELSE WHILE RETURN BREAK INC DEC EQ
 %token <str> IDENTIFIER
 %token <str> NUMBER
 %token <str> STRING
-%type <str> expression condition
+%type <expr> expression
+%type <str> condition
 
 %left '+' '-'
 %left '*' '/' '%'
@@ -135,8 +176,8 @@ return_statement:
     }
     | RETURN expression
     {
-        fprintf(icg, "return %s\n", $2);
-        fprintf(out, "    return %s;\n", $2);
+        fprintf(icg, "return %s\n", $2->text);
+        fprintf(out, "    return %s;\n", $2->text);
     }
 ;
 
@@ -178,20 +219,35 @@ declaration_init:
     INT IDENTIFIER '=' expression
     {
         insert($2, TYPE_INT);
-        fprintf(icg, "%s = %s\n", $2, $4);
-        fprintf(out, "    int %s = %s;\n", $2, $4);
+        if(!can_assign_numeric(TYPE_INT, $4->type)) {
+            printf("Type error: cannot assign %s expression to bro variable %s\n", type_name($4->type), $2);
+            fprintf(out, "    int %s;\n", $2);
+        } else {
+            fprintf(icg, "%s = %s\n", $2, $4->text);
+            fprintf(out, "    int %s = %s;\n", $2, $4->text);
+        }
     }
     | LONG_LONG IDENTIFIER '=' expression
     {
         insert($2, TYPE_LONG_LONG);
-        fprintf(icg, "%s = %s\n", $2, $4);
-        fprintf(out, "    long long %s = %s;\n", $2, $4);
+        if(!can_assign_numeric(TYPE_LONG_LONG, $4->type)) {
+            printf("Type error: cannot assign %s expression to bigbro variable %s\n", type_name($4->type), $2);
+            fprintf(out, "    long long %s;\n", $2);
+        } else {
+            fprintf(icg, "%s = %s\n", $2, $4->text);
+            fprintf(out, "    long long %s = %s;\n", $2, $4->text);
+        }
     }
     | FLOAT IDENTIFIER '=' expression
     {
         insert($2, TYPE_FLOAT);
-        fprintf(icg, "%s = %s\n", $2, $4);
-        fprintf(out, "    float %s = %s;\n", $2, $4);
+        if(!can_assign_numeric(TYPE_FLOAT, $4->type)) {
+            printf("Type error: cannot assign %s expression to lowkey variable %s\n", type_name($4->type), $2);
+            fprintf(out, "    float %s;\n", $2);
+        } else {
+            fprintf(icg, "%s = %s\n", $2, $4->text);
+            fprintf(out, "    float %s = %s;\n", $2, $4->text);
+        }
     }
     | STR IDENTIFIER '=' STRING
     {
@@ -249,10 +305,12 @@ assignment:
         if(!lookup($1)) {
             printf("Error: variable %s not declared\n", $1);
         } else if(get_type($1) == TYPE_STRING) {
-            printf("Error: assign string literals to string variable %s\n", $1);
+            printf("Type error: cannot assign numeric expression to textbro variable %s\n", $1);
+        } else if(!can_assign_numeric(get_type($1), $3->type)) {
+            printf("Type error: cannot assign %s expression to %s variable %s\n", type_name($3->type), type_name(get_type($1)), $1);
         } else {
-            fprintf(icg, "%s = %s\n", $1, $3);
-            fprintf(out, "    %s = %s;\n", $1, $3);
+            fprintf(icg, "%s = %s\n", $1, $3->text);
+            fprintf(out, "    %s = %s;\n", $1, $3->text);
         }
     }
 ;
@@ -299,19 +357,19 @@ condition:
       expression '>' expression
       {
           char *temp = malloc(100);
-          sprintf(temp, "%s > %s", $1, $3);
+                    sprintf(temp, "%s > %s", $1->text, $3->text);
           $$ = temp;
       }
     | expression '<' expression
       {
           char *temp = malloc(100);
-          sprintf(temp, "%s < %s", $1, $3);
+                    sprintf(temp, "%s < %s", $1->text, $3->text);
           $$ = temp;
       }
     | expression EQ expression
       {
           char *temp = malloc(100);
-          sprintf(temp, "%s == %s", $1, $3);
+                    sprintf(temp, "%s == %s", $1->text, $3->text);
           $$ = temp;
       }
 ;
@@ -333,72 +391,81 @@ print_statement:
 
 expression:
       NUMBER
-        { $$ = $1; }
+        {
+            $$ = make_expr($1, literal_numeric_type($1));
+        }
 
     | IDENTIFIER
         {
             if(!lookup($1)) {
                 printf("Error: variable %s not declared\n", $1);
-                $$ = "0";
+                $$ = make_expr("0", TYPE_INT);
             } else if(get_type($1) == TYPE_STRING) {
                 printf("Error: string variable %s cannot be used in numeric expression\n", $1);
-                $$ = "0";
+                $$ = make_expr("0", TYPE_INT);
             } else {
-                $$ = $1;
+                $$ = make_expr($1, get_type($1));
             }
         }
 
 | expression '+' expression
 {
     char *temp = new_temp();
-    fprintf(icg, "%s = %s + %s\n", temp, $1, $3);
+    fprintf(icg, "%s = %s + %s\n", temp, $1->text, $3->text);
 
     char *expr = malloc(100);
-    sprintf(expr, "%s + %s", $1, $3);
-    $$ = expr;
+    sprintf(expr, "%s + %s", $1->text, $3->text);
+    $$ = make_expr(expr, promote_numeric_type($1->type, $3->type));
 }
 
 | expression '-' expression
 {
     char *temp = new_temp();
-    fprintf(icg, "%s = %s - %s\n", temp, $1, $3);
+    fprintf(icg, "%s = %s - %s\n", temp, $1->text, $3->text);
 
     char *expr = malloc(100);
-    sprintf(expr, "%s - %s", $1, $3);
-    $$ = expr;
+    sprintf(expr, "%s - %s", $1->text, $3->text);
+    $$ = make_expr(expr, promote_numeric_type($1->type, $3->type));
 }
 
 | expression '*' expression
 {
     char *temp = new_temp();
-    fprintf(icg, "%s = %s * %s\n", temp, $1, $3);
+    fprintf(icg, "%s = %s * %s\n", temp, $1->text, $3->text);
 
     char *expr = malloc(100);
-    sprintf(expr, "%s * %s", $1, $3);
-    $$ = expr;
+    sprintf(expr, "%s * %s", $1->text, $3->text);
+    $$ = make_expr(expr, promote_numeric_type($1->type, $3->type));
 }
 
 | expression '/' expression
 {
     char *temp = new_temp();
-    fprintf(icg, "%s = %s / %s\n", temp, $1, $3);
+    fprintf(icg, "%s = %s / %s\n", temp, $1->text, $3->text);
 
     char *expr = malloc(100);
-    sprintf(expr, "%s / %s", $1, $3);
-    $$ = expr;
+    sprintf(expr, "%s / %s", $1->text, $3->text);
+    $$ = make_expr(expr, promote_numeric_type($1->type, $3->type));
 }
 
 | expression '%' expression
 {
     char *temp = new_temp();
-    fprintf(icg, "%s = %s %% %s\n", temp, $1, $3);
+    fprintf(icg, "%s = %s %% %s\n", temp, $1->text, $3->text);
 
     char *expr = malloc(100);
-    sprintf(expr, "%s %% %s", $1, $3);
-    $$ = expr;
+    sprintf(expr, "%s %% %s", $1->text, $3->text);
+    $$ = make_expr(expr, promote_numeric_type($1->type, $3->type));
 }
 ;
 %%
+
+ExprNode* make_expr(const char *text, int type) {
+    ExprNode *node = malloc(sizeof(ExprNode));
+    node->text = strdup(text);
+    node->type = type;
+    return node;
+}
 
 void yyerror(const char *s) {
     const char *tok = (yytext && yytext[0]) ? yytext : "EOF";
@@ -410,12 +477,6 @@ void yyerror(const char *s) {
 }
 
 int main() {
-    int verbose = 0;
-    const char *verbose_env = getenv("BRO_VERBOSE");
-    if (verbose_env && strcmp(verbose_env, "1") == 0) {
-        verbose = 1;
-    }
-
     out = fopen("output.cpp", "w");
     icg = fopen("intermediate.txt", "w");
 
@@ -430,11 +491,6 @@ int main() {
 
     fclose(out);
     fclose(icg);
-
-    if (verbose) {
-        printf("C++ code generated in output.cpp\n");
-        printf("Intermediate code generated in intermediate.txt\n");
-    }
 
     return 0;
 }
