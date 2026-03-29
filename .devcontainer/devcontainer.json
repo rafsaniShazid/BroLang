@@ -1,0 +1,13 @@
+{
+  "name": "BroLang",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {},
+      "extensions": []
+    }
+  },
+  "postCreateCommand": "make clean || true"
+}

@@ -45,14 +45,20 @@
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 113 "bro.y"
+#line 165 "bro.y"
 
 typedef struct ExprNode {
     char *text;
     int type;
 } ExprNode;
 
-#line 56 "bro.tab.h"
+typedef struct ArgList {
+    char *text;
+    int count;
+    int types[20];
+} ArgList;
+
+#line 62 "bro.tab.h"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -88,12 +94,14 @@ typedef struct ExprNode {
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 120 "bro.y"
+#line 178 "bro.y"
 
     char *str;
     ExprNode *expr;
+    ArgList *alist;
+    int ival;
 
-#line 97 "bro.tab.h"
+#line 105 "bro.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

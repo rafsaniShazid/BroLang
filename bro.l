@@ -23,6 +23,7 @@
 "("  { return '('; }
 ")"  { return ')'; }
 ";"  { return ';'; }
+","  { return ','; }
 [0-9]+(\.[0-9]+)? {
     yylval.str = strdup(yytext);
     return NUMBER;

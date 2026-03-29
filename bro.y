@@ -9,13 +9,31 @@ extern int yylineno;
 extern char *yytext;
 
 FILE *out;
+FILE *main_out;
+FILE *func_out;
 FILE *icg;
 #define MAX_SYMBOLS 100
+#define MAX_FUNCTIONS 100
+#define MAX_PARAMS 20
 int temp_count = 1;
 int loop_depth = 0;
 
 typedef struct ExprNode ExprNode;
+typedef struct ArgList ArgList;
 ExprNode* make_expr(const char *text, int type);
+ArgList* make_arglist_empty(void);
+ArgList* make_arglist_single(const char *text, int type);
+ArgList* merge_arglists(ArgList *left, ArgList *right);
+void dump_stream(FILE *src, FILE *dst);
+
+char function_names[MAX_FUNCTIONS][50];
+int function_return_types[MAX_FUNCTIONS];
+int function_param_counts[MAX_FUNCTIONS];
+int function_param_types[MAX_FUNCTIONS][MAX_PARAMS];
+int function_count = 0;
+
+int function_scope_base = 0;
+int current_function_return_type = 1;
 
 enum {
     TYPE_INT = 1,
@@ -44,6 +62,40 @@ int lookup_index(char *var) {
 
 int lookup(char *var) {
     return lookup_index(var) != -1;
+}
+
+int can_assign_numeric(int target, int source);
+
+const char* cpp_type_name(int type) {
+    if (type == TYPE_INT) return "int";
+    if (type == TYPE_LONG_LONG) return "long long";
+    if (type == TYPE_FLOAT) return "float";
+    if (type == TYPE_STRING) return "string";
+    return "int";
+}
+
+int find_function(char *name) {
+    for (int i = 0; i < function_count; i++) {
+        if (strcmp(function_names[i], name) == 0) return i;
+    }
+    return -1;
+}
+
+void insert_function(char *name, int return_type, int param_count, int param_types[]) {
+    strcpy(function_names[function_count], name);
+    function_return_types[function_count] = return_type;
+    function_param_counts[function_count] = param_count;
+    for (int i = 0; i < param_count; i++) {
+        function_param_types[function_count][i] = param_types[i];
+    }
+    function_count++;
+}
+
+int can_pass_argument(int expected, int actual) {
+    if (expected == TYPE_STRING || actual == TYPE_STRING) {
+        return expected == actual;
+    }
+    return can_assign_numeric(expected, actual);
 }
 
 int is_numeric_type(int type) {
@@ -115,11 +167,19 @@ typedef struct ExprNode {
     char *text;
     int type;
 } ExprNode;
+
+typedef struct ArgList {
+    char *text;
+    int count;
+    int types[20];
+} ArgList;
 }
 
 %union {
     char *str;
     ExprNode *expr;
+    ArgList *alist;
+    int ival;
 }
 
 %token INT LONG_LONG FLOAT STR COUT CIN IF ELSE WHILE RETURN BREAK INC DEC EQ
@@ -128,13 +188,131 @@ typedef struct ExprNode {
 %token <str> STRING
 %type <expr> expression
 %type <str> condition
+%type <alist> param_list_opt param_list param_decl arg_list_opt arg_list
+%type <ival> type_spec
 
 %left '+' '-'
 %left '*' '/' '%'
 
 %%
 program:
-    statements
+    items
+    ;
+
+items:
+    /* empty */
+    | items item
+    ;
+
+item:
+    type_spec IDENTIFIER ';'
+    {
+        insert($2, $1);
+        fprintf(out, "    %s %s;\n", cpp_type_name($1), $2);
+    }
+    | type_spec IDENTIFIER '=' expression ';'
+    {
+        insert($2, $1);
+        if ($1 == TYPE_STRING) {
+            printf("Type error: use string literal initializer for textbro variable %s\n", $2);
+            fprintf(out, "    string %s;\n", $2);
+        } else if(!can_assign_numeric($1, $4->type)) {
+            printf("Type error: cannot assign %s expression to %s variable %s\n", type_name($4->type), type_name($1), $2);
+            fprintf(out, "    %s %s;\n", cpp_type_name($1), $2);
+        } else {
+            fprintf(icg, "%s = %s\n", $2, $4->text);
+            fprintf(out, "    %s %s = %s;\n", cpp_type_name($1), $2, $4->text);
+        }
+    }
+    | type_spec IDENTIFIER '=' STRING ';'
+    {
+        insert($2, $1);
+        if ($1 != TYPE_STRING) {
+            printf("Type error: cannot assign string literal to %s variable %s\n", type_name($1), $2);
+            fprintf(out, "    %s %s;\n", cpp_type_name($1), $2);
+        } else {
+            fprintf(icg, "%s = %s\n", $2, $4);
+            fprintf(out, "    string %s = %s;\n", $2, $4);
+        }
+    }
+    | type_spec IDENTIFIER '('
+    {
+        if (find_function($2) != -1) {
+            printf("Error: function %s already declared\n", $2);
+        }
+        function_scope_base = symbol_count;
+        symbol_count = 0;
+    }
+    param_list_opt ')'
+    {
+        if (find_function($2) == -1) {
+            insert_function($2, $1, $5->count, $5->types);
+        }
+        current_function_return_type = $1;
+        out = func_out;
+        fprintf(out, "%s %s(%s) {\n", cpp_type_name($1), $2, $5->text);
+    }
+    '{' statements '}'
+    {
+        fprintf(out, "}\n\n");
+        symbol_count = function_scope_base;
+        current_function_return_type = TYPE_INT;
+        out = main_out;
+    }
+    | statement_no_decl
+    ;
+
+statement_no_decl:
+      assignment ';'
+    | string_assignment ';'
+    | function_call_statement ';'
+    | increment_statement ';'
+    | decrement_statement ';'
+    | input_statement ';'
+    | break_statement ';'
+    | return_statement ';'
+    | if_statement
+    | loop_statement
+    | print_statement ';'
+;
+
+type_spec:
+    INT { $$ = TYPE_INT; }
+    | LONG_LONG { $$ = TYPE_LONG_LONG; }
+    | FLOAT { $$ = TYPE_FLOAT; }
+    | STR { $$ = TYPE_STRING; }
+    ;
+
+param_list_opt:
+    /* empty */
+    {
+        $$ = make_arglist_empty();
+    }
+    | param_list
+    {
+        $$ = $1;
+    }
+    ;
+
+param_list:
+    param_decl
+    {
+        $$ = $1;
+    }
+    | param_list ',' param_decl
+    {
+        $$ = merge_arglists($1, $3);
+    }
+    ;
+
+param_decl:
+    type_spec IDENTIFIER
+    {
+        char buf[128];
+        sprintf(buf, "%s %s", cpp_type_name($1), $2);
+        insert($2, $1);
+        $$ = make_arglist_single(buf, $1);
+    }
     ;
 
 statements:
@@ -147,6 +325,7 @@ statement:
         | declaration_init ';'
         | assignment ';'
     | string_assignment ';'
+        | function_call_statement ';'
         | increment_statement ';'
         | decrement_statement ';'
         | input_statement ';'
@@ -155,6 +334,32 @@ statement:
     | if_statement
     | loop_statement
         | print_statement ';'
+;
+
+function_call_statement:
+    IDENTIFIER '(' arg_list_opt ')'
+    {
+        int idx = find_function($1);
+        if (idx == -1) {
+            printf("Error: function %s not declared\n", $1);
+        } else {
+            if (function_param_counts[idx] != $3->count) {
+                printf("Type error: function %s expects %d arguments but got %d\n", $1, function_param_counts[idx], $3->count);
+            } else {
+                int ok = 1;
+                for (int i = 0; i < $3->count; i++) {
+                    if (!can_pass_argument(function_param_types[idx][i], $3->types[i])) {
+                        ok = 0;
+                        printf("Type error: argument %d of function %s has incompatible type\n", i + 1, $1);
+                        break;
+                    }
+                }
+                if (ok) {
+                    fprintf(out, "    %s(%s);\n", $1, $3->text);
+                }
+            }
+        }
+    }
 ;
 
 break_statement:
@@ -395,6 +600,38 @@ expression:
             $$ = make_expr($1, literal_numeric_type($1));
         }
 
+    | IDENTIFIER '(' arg_list_opt ')'
+        {
+            int idx = find_function($1);
+            if (idx == -1) {
+                printf("Error: function %s not declared\n", $1);
+                $$ = make_expr("0", TYPE_INT);
+            } else if (function_return_types[idx] == TYPE_STRING) {
+                printf("Type error: textbro function %s cannot be used in numeric expression\n", $1);
+                $$ = make_expr("0", TYPE_INT);
+            } else if (function_param_counts[idx] != $3->count) {
+                printf("Type error: function %s expects %d arguments but got %d\n", $1, function_param_counts[idx], $3->count);
+                $$ = make_expr("0", TYPE_INT);
+            } else {
+                int ok = 1;
+                for (int i = 0; i < $3->count; i++) {
+                    if (!can_pass_argument(function_param_types[idx][i], $3->types[i])) {
+                        ok = 0;
+                        printf("Type error: argument %d of function %s has incompatible type\n", i + 1, $1);
+                        break;
+                    }
+                }
+
+                if (!ok) {
+                    $$ = make_expr("0", TYPE_INT);
+                } else {
+                    char call[256];
+                    sprintf(call, "%s(%s)", $1, $3->text);
+                    $$ = make_expr(call, function_return_types[idx]);
+                }
+            }
+        }
+
     | IDENTIFIER
         {
             if(!lookup($1)) {
@@ -458,6 +695,29 @@ expression:
     $$ = make_expr(expr, promote_numeric_type($1->type, $3->type));
 }
 ;
+
+arg_list_opt:
+    /* empty */
+    {
+        $$ = make_arglist_empty();
+    }
+    | arg_list
+    {
+        $$ = $1;
+    }
+;
+
+arg_list:
+    expression
+    {
+        $$ = make_arglist_single($1->text, $1->type);
+    }
+    | arg_list ',' expression
+    {
+        ArgList *right = make_arglist_single($3->text, $3->type);
+        $$ = merge_arglists($1, right);
+    }
+;
 %%
 
 ExprNode* make_expr(const char *text, int type) {
@@ -465,6 +725,52 @@ ExprNode* make_expr(const char *text, int type) {
     node->text = strdup(text);
     node->type = type;
     return node;
+}
+
+ArgList* make_arglist_empty(void) {
+    ArgList *list = malloc(sizeof(ArgList));
+    list->text = strdup("");
+    list->count = 0;
+    return list;
+}
+
+ArgList* make_arglist_single(const char *text, int type) {
+    ArgList *list = malloc(sizeof(ArgList));
+    list->text = strdup(text);
+    list->count = 1;
+    list->types[0] = type;
+    return list;
+}
+
+ArgList* merge_arglists(ArgList *left, ArgList *right) {
+    ArgList *list = malloc(sizeof(ArgList));
+    list->count = 0;
+
+    for (int i = 0; i < left->count; i++) {
+        list->types[list->count++] = left->types[i];
+    }
+    for (int i = 0; i < right->count; i++) {
+        list->types[list->count++] = right->types[i];
+    }
+
+    int size = strlen(left->text) + strlen(right->text) + 3;
+    list->text = malloc(size);
+    if (left->count == 0) {
+        sprintf(list->text, "%s", right->text);
+    } else if (right->count == 0) {
+        sprintf(list->text, "%s", left->text);
+    } else {
+        sprintf(list->text, "%s, %s", left->text, right->text);
+    }
+    return list;
+}
+
+void dump_stream(FILE *src, FILE *dst) {
+    int ch;
+    rewind(src);
+    while ((ch = fgetc(src)) != EOF) {
+        fputc(ch, dst);
+    }
 }
 
 void yyerror(const char *s) {
@@ -477,19 +783,27 @@ void yyerror(const char *s) {
 }
 
 int main() {
-    out = fopen("output.cpp", "w");
+    FILE *final_out = fopen("output.cpp", "w");
+    main_out = tmpfile();
+    func_out = tmpfile();
+    out = main_out;
     icg = fopen("intermediate.txt", "w");
-
-    fprintf(out, "#include <iostream>\n");
-    fprintf(out, "#include <string>\n");
-    fprintf(out, "using namespace std;\n\n");
-    fprintf(out, "int main() {\n");
 
     yyparse();
 
-    fprintf(out, "}\n");
+    fprintf(final_out, "#include <iostream>\n");
+    fprintf(final_out, "#include <string>\n");
+    fprintf(final_out, "using namespace std;\n\n");
 
-    fclose(out);
+    dump_stream(func_out, final_out);
+
+    fprintf(final_out, "int main() {\n");
+    dump_stream(main_out, final_out);
+    fprintf(final_out, "}\n");
+
+    fclose(final_out);
+    fclose(main_out);
+    fclose(func_out);
     fclose(icg);
 
     return 0;
